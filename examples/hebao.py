@@ -116,10 +116,6 @@ class NetworkTopo( Topo ):
                             ('0.0.0.0/24', '192.168.222.1')
                         ],
                     },
-                    'wan': {
-                        'ip': '192.168.222.100/24',
-                        'switch': 'unicom_switch',
-                    }
                 },
                 'router222': {
                     'host': {
@@ -143,17 +139,17 @@ class NetworkTopo( Topo ):
         for name, h in topo['hosts'].iteritems():
             h['_name'] = 'h%d' % hi
             hi += 1
-            self.addHost(h['_name'])
-            self.addLink(h['_name'], topo['switches'][h['switch']]['_name'])
+            self.addHost(h['_name'], ip=None)
+            self.addLink(h['_name'], topo['switches'][h['switch']]['_name'], params1={'ip': h['ip']})
         ri = 0
         for name, r in topo['routers'].iteritems():
             r['_name'] = 'r%d' % ri
             ri += 1
-            self.addNode(r['_name'], cls=LinuxRouter)
+            self.addNode(r['_name'], cls=LinuxRouter, ip=None)
             for portname, port in r.iteritems():
                 if portname.startswith('_'):
                     continue
-                self.addLink(r['_name'], topo['switches'][port['switch']]['_name'])
+                self.addLink(r['_name'], topo['switches'][port['switch']]['_name'], params1={'ip': port['ip']})
 
         return
         # r0, s0: office router
