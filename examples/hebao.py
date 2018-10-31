@@ -60,7 +60,7 @@ class RoutesIntf(Intf):
         self.setParam(r, 'setMasquerade', routes=params.get('masquerade'))
         return r
 
-    def setRoutes(self, masquerade):
+    def setMasquerade(self, masquerade):
         if masquerade:
             return self.cmd('iptables -t nat -A POSTROUTING -o %s -j MASQUERADE' % self.name)
 
@@ -122,8 +122,8 @@ class NetworkTopo( Topo ):
                         'switch': 'unicom_switch',
                         'masquerade': True,
                         'routes': [
-                            ('0.0.0.0/0', '192.168.222.1'),
                             ('10.168.222.0/24', '192.168.222.90'),
+                            ('0.0.0.0/0', '192.168.222.1'),
                         ],
                     },
                     'openvpn': {
@@ -136,7 +136,8 @@ class NetworkTopo( Topo ):
                         'ip': '192.168.222.171/24',
                         'switch': 'unicom_switch',
                         'routes': [
-                            ('0.0.0.0/0', '192.168.222.1')
+                            ('10.168.222.0/24', '192.168.222.90'),
+                            ('0.0.0.0/0', '192.168.222.1'),
                         ],
                     },
                     'openvpn': {
@@ -152,6 +153,10 @@ class NetworkTopo( Topo ):
                         'ip': '192.168.222.90/24',
                         'switch': 'unicom_switch', #
                         'masquerade': True,
+                        'routes': [
+                            ('10.8.0.0/24', '192.168.222.171'),
+                            ('0.0.0.0/0', '192.168.222.1'),
+                        ],
                     },
                     'vm': {
                         'ip': '10.168.222.1/24',
@@ -162,6 +167,11 @@ class NetworkTopo( Topo ):
                     'vpn': {
                         'ip': '10.8.0.1/24',
                         'switch': 'openvpn_switch', #
+                        'routes': [
+                            ('192.168.122.0/24', '10.8.0.2'),
+                            ('192.168.222.0/24', '10.8.0.31'),
+                            ('10.168.222.0/24', '10.8.0.31'),
+                        ],
                     },
                 },
             },
