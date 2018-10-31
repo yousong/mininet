@@ -65,6 +65,7 @@ class NetworkTopo( Topo ):
                 'office_switch': {},
                 'office_vm_switch': {},
                 'unicom_switch': {},
+                'unicom_wan_switch': {},
                 'openvpn_switch': {},
             },
             'hosts': {
@@ -173,6 +174,22 @@ class NetworkTopo( Topo ):
                         },
                     },
                 },
+                'routerunicom': {
+                    'ports': {
+                        'lan': {
+                            'ip': '192.168.222.1/24',
+                            'switch': 'unicom_switch',
+                        },
+                        'wan': {
+                            'ip': '198.18.64.2/24',
+                            'switch': 'unicom_wan_switch',
+                            'masquerade': True,
+                            'routes': [
+                                ('0.0.0.0/0', '198.18.64.1'),
+                            ],
+                        },
+                    },
+                },
             },
         }
         swi = 0
@@ -212,9 +229,6 @@ def run():
     topo = NetworkTopo()
     net = Mininet( topo=topo, intf=RoutesIntf, listenPort=6654, controller=[])
     net.start()
-    info( '*** Routing Table on Router:\n' )
-    info( net[ 'r0' ].cmd( 'route -n' ) )
-    info( net[ 'r1' ].cmd( 'route -n' ) )
     CLI( net )
     net.stop()
 
