@@ -14,7 +14,6 @@ class LinuxHost(Node):
     def config( self, **params ):
         r = super( LinuxHost, self).config( **params )
         self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
-        self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
         return r
 
     def setSysctls(self, *sysctls):
