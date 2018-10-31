@@ -38,19 +38,28 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
 class LinuxHost(Node):
-    pass
+
+    def config( self, **params ):
+        r = super( LinuxHost, self).config( **params )
+        self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
+        self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
+        return r
+
+    def setSysctls(self, *sysctls):
+        result = ''
+        for sysctl in sysctls:
+            result += self.cmd('sysctl %s' % sysctl)
+        return result
+
 
 class LinuxRouter(LinuxHost):
     "A Node with IP forwarding enabled."
 
     def config( self, **params ):
-        super( LinuxRouter, self).config( **params )
+        r = super( LinuxRouter, self).config( **params )
         # Enable forwarding on the router
-        self.cmd( 'sysctl net.ipv4.ip_forward=1' )
-
-    def terminate( self ):
-        self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-        super( LinuxRouter, self ).terminate()
+        self.setParam(r, 'setSysctls', sysctls=['net.ipv4.ip_forward=1'])
+        return r
 
 class RoutesIntf(Intf):
 
@@ -110,68 +119,88 @@ class NetworkTopo( Topo ):
                         ('0.0.0.0/0', '10.168.222.1'),
                     ],
                 },
+                'home_yousong': {
+                    'ip': '10.8.0.36/24',
+                    'switch': 'openvpn_switch',
+                    'routes': [
+                        ('192.168.222.0/24', '10.8.0.31'),
+                        ('192.168.122.0/24', '10.8.0.2'),
+                        ('10.168.222.0/24', '10.8.0.1'),
+                    ],
+                },
             },
             'routers': {
                 'office_router': {
-                    'lan': {
-                        'ip': '192.168.122.1/24',
-                        'switch': 'office_switch',
+                    'ports': {
+                        'lan': {
+                            'ip': '192.168.122.1/24',
+                            'switch': 'office_switch',
+                        },
+                        'wan': {
+                            'ip': '192.168.222.100/24',
+                            'switch': 'unicom_switch',
+                            'masquerade': True,
+                            'routes': [
+                                ('10.168.222.0/24', '192.168.222.90'),
+                                ('0.0.0.0/0', '192.168.222.1'),
+                            ],
+                        },
+                        'openvpn': {
+                            'ip': '10.8.0.2/24',
+                            'switch': 'openvpn_switch',
+                        },
                     },
-                    'wan': {
-                        'ip': '192.168.222.100/24',
-                        'switch': 'unicom_switch',
-                        'masquerade': True,
-                        'routes': [
-                            ('10.168.222.0/24', '192.168.222.90'),
-                            ('0.0.0.0/0', '192.168.222.1'),
-                        ],
-                    },
-                    'openvpn': {
-                        'ip': '10.8.0.2/24',
-                        'switch': 'openvpn_switch',
-                    },
+                    'sysctls': [
+                        'net.ipv4.conf.all.rp_filter=2',
+                    ],
                 },
                 'kubenode': {
-                    'host': {
-                        'ip': '192.168.222.171/24',
-                        'switch': 'unicom_switch',
-                        'routes': [
-                            ('10.168.222.0/24', '192.168.222.90'),
-                            ('0.0.0.0/0', '192.168.222.1'),
-                        ],
-                    },
-                    'openvpn': {
-                        'ip': '10.8.0.31/24',
-                        'switch': 'openvpn_switch',
-                        'routes': [
-                            ('192.168.122.0/24', '10.8.0.2'),
-                        ],
+                    'ports': {
+                        'host': {
+                            'ip': '192.168.222.171/24',
+                            'switch': 'unicom_switch',
+                            'routes': [
+                                ('10.168.222.0/24', '192.168.222.90'),
+                                ('0.0.0.0/0', '192.168.222.1'),
+                            ],
+                        },
+                        'openvpn': {
+                            'ip': '10.8.0.31/24',
+                            'switch': 'openvpn_switch',
+                            'routes': [
+                                ('192.168.122.0/24', '10.8.0.2'),
+                            ],
+                        },
                     },
                 },
                 'router222': {
-                    'host': {
-                        'ip': '192.168.222.90/24',
-                        'switch': 'unicom_switch', #
-                        'masquerade': True,
-                        'routes': [
-                            ('10.8.0.0/24', '192.168.222.171'),
-                            ('0.0.0.0/0', '192.168.222.1'),
-                        ],
-                    },
-                    'vm': {
-                        'ip': '10.168.222.1/24',
-                        'switch': 'office_vm_switch',
+                    'ports': {
+                        'host': {
+                            'ip': '192.168.222.90/24',
+                            'switch': 'unicom_switch', #
+                            'routes': [
+                                ('10.8.0.0/24', '192.168.222.171'),
+                                ('192.168.122.0/24', '192.168.222.171'),
+                                ('0.0.0.0/0', '192.168.222.1'),
+                            ],
+                        },
+                        'vm': {
+                            'ip': '10.168.222.1/24',
+                            'switch': 'office_vm_switch',
+                        },
                     },
                 },
                 'routervpn': {
-                    'vpn': {
-                        'ip': '10.8.0.1/24',
-                        'switch': 'openvpn_switch', #
-                        'routes': [
-                            ('192.168.122.0/24', '10.8.0.2'),
-                            ('192.168.222.0/24', '10.8.0.31'),
-                            ('10.168.222.0/24', '10.8.0.31'),
-                        ],
+                    'ports': {
+                        'vpn': {
+                            'ip': '10.8.0.1/24',
+                            'switch': 'openvpn_switch', #
+                            'routes': [
+                                ('192.168.122.0/24', '10.8.0.2'),
+                                ('192.168.222.0/24', '10.8.0.31'),
+                                ('10.168.222.0/24', '10.8.0.31'),
+                            ],
+                        },
                     },
                 },
             },
@@ -185,16 +214,18 @@ class NetworkTopo( Topo ):
         for name, h in topo['hosts'].iteritems():
             h['_name'] = 'h%d' % hi
             hi += 1
-            self.addHost(h['_name'], ip=None)
-            self.addLink(h['_name'], topo['switches'][h['switch']]['_name'], params1={'ip': h['ip'], 'routes': h.get('routes')})
+            self.addHost(h['_name'], ip=None, routes=h.get('routes'))
+            params1={
+                'ip': h['ip'],
+                'routes': h.get('routes'),
+            }
+            self.addLink(h['_name'], topo['switches'][h['switch']]['_name'], params1=params1)
         ri = 0
         for name, r in topo['routers'].iteritems():
             r['_name'] = 'r%d' % ri
             ri += 1
-            self.addNode(r['_name'], cls=LinuxRouter, ip=None)
-            for portname, port in r.iteritems():
-                if portname.startswith('_'):
-                    continue
+            self.addNode(r['_name'], cls=LinuxRouter, ip=None, sysctls=r.get('sysctls'))
+            for portname, port in r['ports'].iteritems():
                 params1 = {
                     'ip': port['ip'],
                     'routes': port.get('routes'),
@@ -206,12 +237,10 @@ class NetworkTopo( Topo ):
             fout.write(json.dumps(topo, indent=2))
 
 
-        return
-
 def run():
     "Test linux router"
     topo = NetworkTopo()
-    net = Mininet( topo=topo, intf=RoutesIntf )
+    net = Mininet( topo=topo, intf=RoutesIntf, listenPort=6654, controller=[])
     net.start()
     info( '*** Routing Table on Router:\n' )
     info( net[ 'r0' ].cmd( 'route -n' ) )
