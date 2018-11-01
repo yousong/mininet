@@ -24,7 +24,6 @@ class LinuxHost(Node):
 
 
 class LinuxRouter(LinuxHost):
-    "A Node with IP forwarding enabled."
 
     def config( self, **params ):
         r = super( LinuxRouter, self).config( **params )
@@ -32,13 +31,22 @@ class LinuxRouter(LinuxHost):
         self.setParam(r, 'setSysctls', sysctls=['net.ipv4.ip_forward=1'])
         return r
 
+
 class RoutesIntf(Intf):
 
     def config(self, **params):
         r = super(RoutesIntf, self).config(**params)
         self.setParam(r, 'setRoutes', routes=params.get('routes'))
         self.setParam(r, 'setMasquerade', routes=params.get('masquerade'))
+        self.setParam(r, 'setIptables', iptables=params.get('iptables'))
         return r
+
+    def setIptables(self, *iptables):
+        result = ''
+        for cmd in iptables:
+            cmd = cmd.replace('<intf>', self.name)
+            result += self.cmd(cmd)
+        return result
 
     def setMasquerade(self, masquerade):
         if masquerade:
@@ -56,6 +64,18 @@ class RoutesIntf(Intf):
             result += self.cmd(cmd)
         return result
 
+    def delete(self):
+        super(RoutesIntf, self).delete()
+        if not self.node.inNamespace:
+            if self.params.get('masquerade'):
+                self.cmd('iptables -t nat -D POSTROUTING -o %s -j MASQUERADE' % self.name)
+            iptables = self.params.get('iptables')
+            if iptables:
+                for cmd in iptables:
+                    cmd = cmd.replace('<intf>', self.name)
+                    cmd = cmd.replace(' -A ', ' -D ', 1)
+                    self.cmd(cmd)
+
 class NetworkTopo( Topo ):
 
     def build( self, **_opts ):
@@ -72,32 +92,55 @@ class NetworkTopo( Topo ):
                 'office_air': {
                     'ip': '192.168.122.107/24',
                     'switch': 'office_switch',
-                    'routes': [
-                        ('0.0.0.0/0', '192.168.122.1'),
-                    ],
+                    'link_params': {
+                        'routes': [
+                            ('0.0.0.0/0', '192.168.122.1'),
+                        ],
+                    },
                 },
                 'office_printer': {
                     'ip': '192.168.122.127/24',
                     'switch': 'office_switch',
-                    'routes': [
-                        ('0.0.0.0/0', '192.168.122.1'),
-                    ],
+                    'link_params': {
+                        'routes': [
+                            ('0.0.0.0/0', '192.168.122.1'),
+                        ],
+                    },
                 },
                 'office_vm_titan': {
                     'ip': '10.168.222.136/24',
                     'switch': 'office_vm_switch',
-                    'routes': [
-                        ('0.0.0.0/0', '10.168.222.1'),
-                    ],
+                    'link_params': {
+                        'routes': [
+                            ('0.0.0.0/0', '10.168.222.1'),
+                        ],
+                    },
+                },
+                'unicom_gateway': {
+                    'ip': '198.18.64.1/24',
+                    'switch': 'unicom_wan_switch',
+                    'host_params': {
+                        'inNamespace': False,
+                    },
+                    'link_params': {
+                        'iptables': [
+                            'iptables -t nat -A POSTROUTING -s 198.18.64.0/24 -o br0 -j MASQUERADE',
+                        ],
+                        'routes': [
+                            ('0.0.0.0/0', '198.18.64.1'),
+                        ],
+                    },
                 },
                 'home_yousong': {
                     'ip': '10.8.0.36/24',
                     'switch': 'openvpn_switch',
-                    'routes': [
-                        ('192.168.222.0/24', '10.8.0.31'),
-                        ('192.168.122.0/24', '10.8.0.2'),
-                        ('10.168.222.0/24', '10.8.0.1'),
-                    ],
+                    'link_params': {
+                        'routes': [
+                            ('192.168.222.0/24', '10.8.0.31'),
+                            ('192.168.122.0/24', '10.8.0.2'),
+                            ('10.168.222.0/24', '10.8.0.1'),
+                        ],
+                    },
                 },
             },
             'routers': {
@@ -154,6 +197,12 @@ class NetworkTopo( Topo ):
                                 ('192.168.122.0/24', '192.168.222.171'),
                                 ('0.0.0.0/0', '192.168.222.1'),
                             ],
+                            'iptables': [
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 10.0.0.0/8 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 172.16.0.0/12 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 192.168.0.0/16 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
+                            ],
                         },
                         'vm': {
                             'ip': '10.168.222.1/24',
@@ -201,11 +250,11 @@ class NetworkTopo( Topo ):
         for name, h in topo['hosts'].iteritems():
             h['_name'] = 'h%d' % hi
             hi += 1
-            self.addHost(h['_name'], ip=None, routes=h.get('routes'))
+            self.addHost(h['_name'], ip=None, routes=h.get('routes'), **h.get('host_params', {}))
             params1={
                 'ip': h['ip'],
-                'routes': h.get('routes'),
             }
+            params1.update(h.get('link_params', {}))
             self.addLink(h['_name'], topo['switches'][h['switch']]['_name'], params1=params1)
         ri = 0
         for name, r in topo['routers'].iteritems():
@@ -217,6 +266,7 @@ class NetworkTopo( Topo ):
                     'ip': port['ip'],
                     'routes': port.get('routes'),
                     'masquerade': port.get('masquerade'),
+                    'iptables': port.get('iptables'),
                 }
                 self.addLink(r['_name'], topo['switches'][port['switch']]['_name'], params1=params1)
 
