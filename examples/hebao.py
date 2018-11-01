@@ -2,14 +2,16 @@
 
 import json
 
+import mininet
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import Node
+from mininet.node import Node, Host
 from mininet.link import Intf
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
+from mininet.util import quietRun
 
-class LinuxHost(Node):
+class LinuxHost(Host):
 
     def config( self, **params ):
         r = super( LinuxHost, self).config( **params )
@@ -21,6 +23,31 @@ class LinuxHost(Node):
         for sysctl in sysctls:
             result += self.cmd('sysctl %s' % sysctl)
         return result
+
+    def runAgent(self):
+        desc = self.params.get('desc', {})
+        __name = desc.get('__name', self.name)
+        __ip = desc['ip']
+        __switch = desc.get('switch', 'DUM_SWITCH')
+
+        hebenv = [
+            'MON_MASTER_HOST=198.18.64.1',
+            'MON_MASTER_PORT=8080',
+            'MON_WHO_AM_I={name}',
+            'MON_WHO_AM_I_IP=' + __ip,
+            'MON_WHO_AM_I_NETCARD=' + self.intf().name,
+            'MON_WHO_AM_I_SWITCH=' + __switch,
+        ]
+        hebenv = ';'.join('export ' + var for var in hebenv).format(name=__name)
+        hebcmd = 'celery worker -A inner_monitor -l info -Q {name}_run -n {name}_run -c 1'.format(name=__name)
+        hebwd = '/opt/sys_net_monitor/agent/tcp_ping'
+        cmd = [
+            'tmux', 'new-window', '-d', '-t', 'heb', "-n", __name, "-c", hebwd,
+            'mnexec', '-a', str(self.pid),
+            'bash', '-c',
+            '{hebenv}; {hebcmd}; PS1="{name}> " bash --rcfile /dev/null'.format(hebenv=hebenv, hebcmd=hebcmd, name=__name),
+        ]
+        quietRun(cmd)
 
 
 class LinuxRouter(LinuxHost):
@@ -84,15 +111,6 @@ class NetworkTopo( Topo ):
             'hosts': {
                 'office_air': {
                     'ip': '192.168.122.107/24',
-                    'switch': 'office_switch',
-                    'link_params': {
-                        'routes': [
-                            ('0.0.0.0/0', '192.168.122.1'),
-                        ],
-                    },
-                },
-                'office_printer': {
-                    'ip': '192.168.122.127/24',
                     'switch': 'office_switch',
                     'link_params': {
                         'routes': [
@@ -242,13 +260,15 @@ class NetworkTopo( Topo ):
         swi = 0
         for name, sw in topo['switches'].iteritems():
             sw['_name'] = 's%d' % swi
+            sw['__name'] = name
             swi += 1
             self.addSwitch(sw['_name'], failMode='standalone')
         hi = 0
         for name, h in topo['hosts'].iteritems():
             h['_name'] = 'h%d' % hi
+            h['__name'] = name
             hi += 1
-            self.addHost(h['_name'], ip=None, routes=h.get('routes'), **h.get('host_params', {}))
+            self.addHost(h['_name'], ip=None, desc=h, routes=h.get('routes'), **h.get('host_params', {}))
             params1={
                 'ip': h['ip'],
             }
@@ -257,6 +277,7 @@ class NetworkTopo( Topo ):
         ri = 0
         for name, r in topo['routers'].iteritems():
             r['_name'] = 'r%d' % ri
+            r['__name'] = name
             ri += 1
             self.addNode(r['_name'], cls=LinuxRouter, ip=None, sysctls=r.get('sysctls'))
             for portname, port in r['ports'].iteritems():
@@ -274,10 +295,15 @@ class NetworkTopo( Topo ):
 def run():
     "Test linux router"
     topo = NetworkTopo()
-    net = Mininet( topo=topo, intf=RoutesIntf, listenPort=6654, controller=[])
+    net = Mininet( topo=topo, host=LinuxHost, intf=RoutesIntf, listenPort=6654, controller=[])
     net.start()
+    quietRun('tmux new-session -d -s heb')
+    for h in net.values():
+        if h.__class__ == LinuxHost:
+            h.runAgent()
     CLI( net )
     net.stop()
+    quietRun('tmux kill-session -t heb')
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
