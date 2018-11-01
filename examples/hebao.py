@@ -16,6 +16,7 @@ class LinuxHost(Host):
     def config( self, **params ):
         r = super( LinuxHost, self).config( **params )
         self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
+        self.setParam(r, 'setSysctls', sysctls=['net.ipv4.icmp_ratelimit=0'])
         return r
 
     def setSysctls(self, *sysctls):
@@ -249,6 +250,19 @@ class NetworkTopo( Topo ):
                                 ('192.168.122.0/24', '10.8.0.2'),
                                 ('192.168.222.0/24', '10.8.0.31'),
                                 ('10.168.222.0/24', '10.8.0.31'),
+                            ],
+                        },
+                        'wan': {
+                            'ip': '198.18.64.3/24',
+                            'switch': 'unicom_wan_switch', #
+                            'routes': [
+                                ('0.0.0.0/0', '198.18.64.1'),
+                            ],
+                            'iptables': [
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 10.0.0.0/8 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 172.16.0.0/12 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 192.168.0.0/16 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
                             ],
                         },
                     },
