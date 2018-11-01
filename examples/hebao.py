@@ -26,11 +26,13 @@ class LinuxHost(Host):
 
     def runAgent(self):
         desc = self.params.get('desc', {})
+        if not desc.get('runAgent', True):
+            return
         __name = desc.get('__name', self.name)
-        __ip = desc['ip']
+        __ip = desc['ip'].split('/')[0]
         __switch = desc.get('switch', 'DUM_SWITCH')
 
-        hebenv = [
+        __monenv = [
             'MON_MASTER_HOST=198.18.64.1',
             'MON_MASTER_PORT=8080',
             'MON_WHO_AM_I={name}',
@@ -38,16 +40,28 @@ class LinuxHost(Host):
             'MON_WHO_AM_I_NETCARD=' + self.intf().name,
             'MON_WHO_AM_I_SWITCH=' + __switch,
         ]
-        hebenv = ';'.join('export ' + var for var in hebenv).format(name=__name)
-        hebcmd = 'celery worker -A inner_monitor -l info -Q {name}_run -n {name}_run -c 1'.format(name=__name)
-        hebwd = '/opt/sys_net_monitor/agent/tcp_ping'
-        cmd = [
-            'tmux', 'new-window', '-d', '-t', 'heb', "-n", __name, "-c", hebwd,
-            'mnexec', '-a', str(self.pid),
-            'bash', '-c',
-            '{hebenv}; {hebcmd}; PS1="{name}> " bash --rcfile /dev/null'.format(hebenv=hebenv, hebcmd=hebcmd, name=__name),
-        ]
-        quietRun(cmd)
+        __monenv = ';'.join('export ' + var for var in __monenv).format(name=__name)
+
+        def run(sess, wdir, cmd):
+            wndcmd = [
+                'tmux', 'new-window', '-d', '-t', sess, "-n", __name, "-c", wdir,
+                'mnexec', '-a', str(self.pid),
+                'bash', '-c',
+                '{__monenv}; {cmd}; PS1="{name}> " bash --rcfile /dev/null'.format(__monenv=__monenv, cmd=cmd, name=__name),
+            ]
+            return quietRun(wndcmd)
+
+        def runRegister(wdir, cmd):
+            onecmd = [
+                'mnexec', '-a', str(self.pid),
+                'bash', '-c',
+                '{__monenv}; cd {wdir}; {cmd};'.format(__monenv=__monenv, wdir=wdir, cmd=cmd),
+            ]
+            return quietRun(onecmd)
+
+        runRegister('/opt/sys_net_monitor/agent/tcp_ping', 'python inner_monitor.py -r same')
+        run('hebping', '/opt/sys_net_monitor/agent/tcp_ping', 'celery worker -A inner_monitor -l info -Q {name}_run -n {name}_run -c 1'.format(name=__name))
+        run('hebtrace', '/opt/sys_net_monitor/agent/trace', 'celery worker -A inner_monitor -l info -Q {name}_trace -n {name}_trace -c 1'.format(name=__name))
 
 
 class LinuxRouter(LinuxHost):
@@ -130,6 +144,7 @@ class NetworkTopo( Topo ):
                 'unicom_gateway': {
                     'ip': '198.18.64.1/24',
                     'switch': 'unicom_wan_switch',
+                    'runAgent': False,
                     'host_params': {
                         'inNamespace': False,
                     },
@@ -151,6 +166,7 @@ class NetworkTopo( Topo ):
                             ('192.168.222.0/24', '10.8.0.31'),
                             ('192.168.122.0/24', '10.8.0.2'),
                             ('10.168.222.0/24', '10.8.0.1'),
+                            ('0.0.0.0/0', '10.8.0.1'),
                         ],
                     },
                 },
@@ -297,13 +313,15 @@ def run():
     topo = NetworkTopo()
     net = Mininet( topo=topo, host=LinuxHost, intf=RoutesIntf, listenPort=6654, controller=[])
     net.start()
-    quietRun('tmux new-session -d -s heb')
+    quietRun('tmux new-session -d -s hebtrace')
+    quietRun('tmux new-session -d -s hebping')
     for h in net.values():
         if h.__class__ == LinuxHost:
             h.runAgent()
     CLI( net )
     net.stop()
-    quietRun('tmux kill-session -t heb')
+    quietRun('tmux kill-session -t hebtrace')
+    quietRun('tmux kill-session -t hebping')
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
