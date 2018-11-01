@@ -266,6 +266,9 @@ class NetworkTopo( Topo ):
                                 ('0.0.0.0/0', '198.18.64.1'),
                             ],
                             'iptables': [
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 10.0.0.0/8 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 172.16.0.0/12 -j RETURN',
+                                'iptables -t nat -A POSTROUTING -o <intf> -d 192.168.0.0/16 -j RETURN',
                                 'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
                             ],
                         },
