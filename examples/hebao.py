@@ -117,6 +117,7 @@ class NetworkTopo( Topo ):
                     },
                     'link_params': {
                         'iptables': [
+                            'iptables -t nat -A PREROUTING -i <intf> -d 198.18.64.1 -p tcp -m multiport --dports 8080,6379 -j DNAT --to-destination 10.168.26.196',
                             'iptables -t nat -A POSTROUTING -s 198.18.64.0/24 -o br0 -j MASQUERADE',
                         ],
                         'routes': [
