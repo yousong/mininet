@@ -37,7 +37,6 @@ class RoutesIntf(Intf):
     def config(self, **params):
         r = super(RoutesIntf, self).config(**params)
         self.setParam(r, 'setRoutes', routes=params.get('routes'))
-        self.setParam(r, 'setMasquerade', routes=params.get('masquerade'))
         self.setParam(r, 'setIptables', iptables=params.get('iptables'))
         return r
 
@@ -47,10 +46,6 @@ class RoutesIntf(Intf):
             cmd = cmd.replace('<intf>', self.name)
             result += self.cmd(cmd)
         return result
-
-    def setMasquerade(self, masquerade):
-        if masquerade:
-            return self.cmd('iptables -t nat -A POSTROUTING -o %s -j MASQUERADE' % self.name)
 
     def setRoutes(self, *routes):
         result = ''
@@ -67,8 +62,6 @@ class RoutesIntf(Intf):
     def delete(self):
         super(RoutesIntf, self).delete()
         if not self.node.inNamespace:
-            if self.params.get('masquerade'):
-                self.cmd('iptables -t nat -D POSTROUTING -o %s -j MASQUERADE' % self.name)
             iptables = self.params.get('iptables')
             if iptables:
                 for cmd in iptables:
@@ -153,10 +146,12 @@ class NetworkTopo( Topo ):
                         'wan': {
                             'ip': '192.168.222.100/24',
                             'switch': 'unicom_switch',
-                            'masquerade': True,
                             'routes': [
                                 ('10.168.222.0/24', '192.168.222.90'),
                                 ('0.0.0.0/0', '192.168.222.1'),
+                            ],
+                            'iptables': [
+                                'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
                             ],
                         },
                         'openvpn': {
@@ -232,9 +227,11 @@ class NetworkTopo( Topo ):
                         'wan': {
                             'ip': '198.18.64.2/24',
                             'switch': 'unicom_wan_switch',
-                            'masquerade': True,
                             'routes': [
                                 ('0.0.0.0/0', '198.18.64.1'),
+                            ],
+                            'iptables': [
+                                'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
                             ],
                         },
                     },
@@ -265,7 +262,6 @@ class NetworkTopo( Topo ):
                 params1 = {
                     'ip': port['ip'],
                     'routes': port.get('routes'),
-                    'masquerade': port.get('masquerade'),
                     'iptables': port.get('iptables'),
                 }
                 self.addLink(r['_name'], topo['switches'][port['switch']]['_name'], params1=params1)
