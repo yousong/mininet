@@ -178,7 +178,7 @@ class NetworkTopo( Topo ):
                     },
                 },
                 'east1': {
-                    'ip': '172.16.1.3/24',
+                    'ip': '172.16.1.99/24',
                     'switch': 'right_switch1',
                     'link_params': {
                         'routes': [
@@ -192,7 +192,7 @@ class NetworkTopo( Topo ):
                     },
                 },
                 'east2': {
-                    'ip': '172.16.2.3/24',
+                    'ip': '172.16.2.99/24',
                     'switch': 'right_switch2',
                     'link_params': {
                         'routes': [
@@ -206,7 +206,7 @@ class NetworkTopo( Topo ):
                     },
                 },
                 'east3': {
-                    'ip': '172.16.3.4/24',
+                    'ip': '172.16.3.99/24',
                     'switch': 'right_switch3',
                     'link_params': {
                         'routes': [
@@ -220,7 +220,7 @@ class NetworkTopo( Topo ):
                     },
                 },
                 'east4': {
-                    'ip': '172.16.4.2/24',
+                    'ip': '172.16.4.99/24',
                     'switch': 'right_switch4',
                     'link_params': {
                         'routes': [
@@ -229,7 +229,7 @@ class NetworkTopo( Topo ):
                     },
                 },
                 'east5': {
-                    'ip': '172.16.5.2/24',
+                    'ip': '172.16.5.99/24',
                     'switch': 'right_switch5',
                     'link_params': {
                         'routes': [
@@ -259,6 +259,9 @@ class NetworkTopo( Topo ):
                         'openvpn': {
                             'ip': '10.8.0.2/24',
                             'switch': 'openvpn_switch',
+                            'routes': [
+                                ('172.16.0.0/16', '10.8.0.1'),
+                            ],
                         },
                     },
                     'sysctls': [
@@ -280,6 +283,7 @@ class NetworkTopo( Topo ):
                             'switch': 'openvpn_switch',
                             'routes': [
                                 ('192.168.122.0/24', '10.8.0.2'),
+                                ('172.16.0.0/16', '10.8.0.1'),
                             ],
                         },
                     },
@@ -291,6 +295,7 @@ class NetworkTopo( Topo ):
                             'switch': 'unicom_switch', #
                             'routes': [
                                 ('10.8.0.0/24', '192.168.222.171'),
+                                ('172.16.0.0/16', '192.168.222.171'),
                                 ('192.168.122.0/24', '192.168.222.171'),
                                 ('0.0.0.0/0', '192.168.222.1'),
                             ],
