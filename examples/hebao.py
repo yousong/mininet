@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
+import sys
 import json
+import urllib2
 
-import mininet
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import Node, Host
+from mininet.node import Host
 from mininet.link import Intf
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel
 from mininet.cli import CLI
 from mininet.util import quietRun
 
@@ -541,6 +542,39 @@ class NetworkTopo( Topo ):
         with open('devenv.json', 'w') as fout:
             fout.write(json.dumps(topo, indent=2))
 
+def _postRouterInfo(method, api, data=None):
+    if method == 'GET':
+        d = urllib2.urlopen(api).read()
+        return json.loads(d)
+    if method == 'POST' and data is not None:
+        req = urllib2.Request(api)
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor())
+        response = opener.open(req, json.dumps(data))
+        d = response.read()
+        return json.loads(d)
+
+def postRouterInfo():
+    api = 'http://10.168.26.196:8080/cmdb/rest/'
+    zone_id_east = 1
+    zone_id_west = 2
+
+    rpd = []
+    for rname, r in topo['routers'].iteritems():
+        zone_id = zone_id_east if 'east' in rname else zone_id_west
+        rpd.append({"name": rname, "enabled": True, "zone_id": zone_id})
+    _postRouterInfo('POST', api, {'router': rpd})
+    rdata = _postRouterInfo('GET', api + '?app=router')
+    rnameidmap = {}
+    for r in rdata:
+        rnameidmap[r['name']] = r['id']
+
+    ppd = []
+    for rname, r in topo['routers'].iteritems():
+        for pname, p in r['ports'].iteritems():
+            ip = p['ip'].split('/')[0]
+            router_id = rnameidmap[rname]
+            ppd.append({"name": pname, "ip": ip, "speed": 1000, 'router_id': router_id})
+    _postRouterInfo('POST', api, {"interface": ppd})
 
 def run():
     "Test linux router"
@@ -558,5 +592,8 @@ def run():
     quietRun('tmux kill-session -t hebping')
 
 if __name__ == '__main__':
-    setLogLevel( 'info' )
-    run()
+    if len(sys.argv) > 1:
+        postRouterInfo()
+    else:
+        setLogLevel( 'info' )
+        run()
