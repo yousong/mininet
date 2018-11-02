@@ -17,6 +17,7 @@ class LinuxHost(Host):
         r = super( LinuxHost, self).config( **params )
         self.setParam(r, 'setSysctls', sysctls=params.get('sysctls'))
         self.setParam(r, 'setSysctls', sysctls=['net.ipv4.icmp_ratelimit=0'])
+        self.setParam(r, 'setSysctls', sysctls=['net.ipv4.conf.all.rp_filter=2'])
         return r
 
     def setSysctls(self, *sysctls):
