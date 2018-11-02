@@ -123,12 +123,12 @@ class NetworkTopo( Topo ):
                 'unicom_switch': {},
                 'unicom_wan_switch': {},
                 'openvpn_switch': {},
-                'right_switch0': {},
-                'right_switch1': {},
-                'right_switch2': {},
-                'right_switch3': {},
-                'right_switch4': {},
-                'right_switch5': {},
+                'east_switch0': {},
+                'east_switch1': {},
+                'east_switch2': {},
+                'east_switch3': {},
+                'east_switch4': {},
+                'east_switch5': {},
             },
             'hosts': {
                 'office_air': {
@@ -193,7 +193,7 @@ class NetworkTopo( Topo ):
                 },
                 'east1': {
                     'ip': '172.16.1.99/24',
-                    'switch': 'right_switch1',
+                    'switch': 'east_switch1',
                     'link_params': {
                         'routes': [
                             ('172.16.0.0/24', '172.16.1.1'),
@@ -207,7 +207,7 @@ class NetworkTopo( Topo ):
                 },
                 'east2': {
                     'ip': '172.16.2.99/24',
-                    'switch': 'right_switch2',
+                    'switch': 'east_switch2',
                     'link_params': {
                         'routes': [
                             ('172.16.0.0/24', '172.16.2.1'),
@@ -221,7 +221,7 @@ class NetworkTopo( Topo ):
                 },
                 'east3': {
                     'ip': '172.16.3.99/24',
-                    'switch': 'right_switch3',
+                    'switch': 'east_switch3',
                     'link_params': {
                         'routes': [
                             ('172.16.0.0/24', '172.16.3.2'),
@@ -235,7 +235,7 @@ class NetworkTopo( Topo ):
                 },
                 'east4': {
                     'ip': '172.16.4.99/24',
-                    'switch': 'right_switch4',
+                    'switch': 'east_switch4',
                     'link_params': {
                         'routes': [
                             ('0.0.0.0/0', '172.16.4.1'),
@@ -244,7 +244,7 @@ class NetworkTopo( Topo ):
                 },
                 'east5': {
                     'ip': '172.16.5.99/24',
-                    'switch': 'right_switch5',
+                    'switch': 'east_switch5',
                     'link_params': {
                         'routes': [
                             ('0.0.0.0/0', '172.16.5.1'),
@@ -350,9 +350,9 @@ class NetworkTopo( Topo ):
                                 'iptables -t nat -A POSTROUTING -o <intf> -j MASQUERADE',
                             ],
                         },
-                        'right_core': {
+                        'east_core': {
                             'ip': '172.16.0.1/24',
-                            'switch': 'right_switch0',
+                            'switch': 'east_switch0',
                             'routes': [
                                 ('172.16.1.0/24', '172.16.0.2'),
                                 ('172.16.2.0/24', '172.16.0.3'),
@@ -363,20 +363,20 @@ class NetworkTopo( Topo ):
                         },
                     },
                 },
-                'right1': {
+                'east1': {
                     'ports': {
-                        'right0': {
+                        'east0': {
                             'ip': '172.16.0.2/24',
-                            'switch': 'right_switch0',
+                            'switch': 'east_switch0',
                             'routes': [
                                 ('172.16.2.0/24', '172.16.0.3'),
                                 ('172.16.4.0/24', '172.16.0.4'),
                                 ('0.0.0.0/0', '172.16.0.1'),
                             ],
                         },
-                        'right1': {
+                        'east1': {
                             'ip': '172.16.1.1/24',
-                            'switch': 'right_switch1',
+                            'switch': 'east_switch1',
                             'routes': [
                                 ('172.16.3.0/24', '172.16.1.2'),
                                 ('172.16.5.0/24', '172.16.1.2'),
@@ -384,18 +384,18 @@ class NetworkTopo( Topo ):
                         },
                     },
                 },
-                'rightx2': {
+                'eastx2': {
                     'ports': {
-                        'right1': {
+                        'east1': {
                             'ip': '172.16.1.2/24',
-                            'switch': 'right_switch1',
+                            'switch': 'east_switch1',
                             'routes': [
                                 ('0.0.0.0/0', '172.16.1.1'),
                             ],
                         },
-                        'right3': {
+                        'east3': {
                             'ip': '172.16.3.2/24',
-                            'switch': 'right_switch3',
+                            'switch': 'east_switch3',
                             'routes': [
                                 ('172.16.2.0/24', '172.16.3.3'),
                                 ('172.16.5.0/24', '172.16.3.1'),
@@ -403,11 +403,11 @@ class NetworkTopo( Topo ):
                         },
                     },
                 },
-                'rightx3': {
+                'eastx3': {
                     'ports': {
-                        'right2': {
+                        'east2': {
                             'ip': '172.16.2.2/24',
-                            'switch': 'right_switch2',
+                            'switch': 'east_switch2',
                             'routes': [
                                 ('172.16.0.0/24', '172.16.2.1'),
                                 ('172.16.1.0/24', '172.16.2.1'),
@@ -415,20 +415,20 @@ class NetworkTopo( Topo ):
                                 ('0.0.0.0/0', '172.16.2.1'),
                             ],
                         },
-                        'right3': {
+                        'east3': {
                             'ip': '172.16.3.3/24',
-                            'switch': 'right_switch3',
+                            'switch': 'east_switch3',
                             'routes': [
                                 ('172.16.5.0/24', '172.16.3.1'),
                             ],
                         },
                     },
                 },
-                'right3': {
+                'east3': {
                     'ports': {
-                        'right3': {
+                        'east3': {
                             'ip': '172.16.3.1/24',
-                            'switch': 'right_switch3',
+                            'switch': 'east_switch3',
                             'routes': [
                                 ('172.16.0.0/24', '172.16.3.2'),
                                 ('172.16.1.0/24', '172.16.3.2'),
@@ -437,26 +437,26 @@ class NetworkTopo( Topo ):
                                 ('0.0.0.0/0', '172.16.3.3'),
                             ],
                         },
-                        'right5': {
+                        'east5': {
                             'ip': '172.16.5.1/24',
-                            'switch': 'right_switch5',
+                            'switch': 'east_switch5',
                         },
                     },
                 },
-                'right2': {
+                'east2': {
                     'ports': {
-                        'right0': {
+                        'east0': {
                             'ip': '172.16.0.3/24',
-                            'switch': 'right_switch0',
+                            'switch': 'east_switch0',
                             'routes': [
                                 ('172.16.1.0/24', '172.16.0.2'),
                                 ('172.16.4.0/24', '172.16.0.4'),
                                 ('0.0.0.0/0', '172.16.0.1'),
                             ],
                         },
-                        'right2': {
+                        'east2': {
                             'ip': '172.16.2.1/24',
-                            'switch': 'right_switch2',
+                            'switch': 'east_switch2',
                             'routes': [
                                 ('172.16.3.0/24', '172.16.2.2'),
                                 ('172.16.5.0/24', '172.16.2.2'),
@@ -464,11 +464,11 @@ class NetworkTopo( Topo ):
                         },
                     },
                 },
-                'right4': {
+                'east4': {
                     'ports': {
-                        'right0': {
+                        'east0': {
                             'ip': '172.16.0.4/24',
-                            'switch': 'right_switch0',
+                            'switch': 'east_switch0',
                             'routes': [
                                 ('172.16.1.0/24', '172.16.0.2'),
                                 ('172.16.2.0/24', '172.16.0.3'),
@@ -477,9 +477,9 @@ class NetworkTopo( Topo ):
                                 ('0.0.0.0/0', '172.16.0.1'),
                             ],
                         },
-                        'right4': {
+                        'east4': {
                             'ip': '172.16.4.1/24',
-                            'switch': 'right_switch4',
+                            'switch': 'east_switch4',
                         },
                     },
                 },
