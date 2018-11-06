@@ -583,7 +583,7 @@ def postRouterInfo():
         for pname, p in r['ports'].iteritems():
             ip = p['ip'].split('/')[0]
             router_id = rnameidmap[rname]
-            ppd.append({"name": pname, "ip": ip, "speed": 1000, 'router_id': router_id})
+            ppd.append({"name": pname, "ip": ip, "speed": 125000000, 'router_id': router_id})
     _postRouterInfo('POST', api, {"interface": ppd})
 
 def run():
